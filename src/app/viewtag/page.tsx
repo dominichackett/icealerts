@@ -27,9 +27,13 @@ import VideoCall from '@/components/VideoCall/VideoCall'
 export default function ViewTag() {
     const [open, setOpen] = useState(false)
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x01231"},{name:'Wife',address:"0x01232"},{name:'Mother',address:"0x01233"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
+    const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x86820D4C1C9E12F5388136B19Da99A153ED767C1"},{name:'Wife',address:"0x01232"},{name:'Mother',address:"0x01233"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
     const [preview, setPreview] = useState('')
     const [videoCall,setVideoCall] = useState()
+    const [addressToCall,setAddressToCall] = useState()
+    const [personTocall,setPersonTocall] = useState()
+    const [personToMessage,setPersonToMessage] = useState()
+    const [addressToMessage,setAddresToMessage] = useState()
     const closeVideoCall = ()=>{
         setVideoCall(false)
     }
@@ -45,7 +49,20 @@ export default function ViewTag() {
       // ...other context values and functions you need
     } = useAccountAbstraction();
   
+    useEffect(() => {
+      loginWeb3Auth();
+    }, []);
+  
+    const setCallData=(name:any,address:any)=>{
+      setPersonTocall(name)
+      setAddressToCall(address)
+    }
 
+
+    const setMessageData=(name:any,address:any)=>{
+       setPersonToMessage(name)
+       setAddresToMessage(address)   
+    }
   return (
     <div className="bg-black">
       {/* Mobile menu */}
@@ -125,7 +142,7 @@ export default function ViewTag() {
 
                     </label>
 </div>
-<VideoCall />
+{(web3ProviderConnected && addressToCall)&&<VideoCall address={ownerAddress} addressToCall={addressToCall} />}
 <div className="mb-8">
    
         <div
@@ -174,7 +191,7 @@ export default function ViewTag() {
     </div>
  
 <div className="mb-8">
-  <EmergencyChat address={ownerAddress} />
+  {(web3ProviderConnected && personToMessage && addressToMessage )&& <EmergencyChat address={ownerAddress} personToMessage={personToMessage} addressToMessage={addressToMessage} />}
 <h1 className="mb-4 text-3xl font-bold tracking-tight text-white">App Emergency Contacts</h1>
 
       {contacts.map((item, index) => (
@@ -191,7 +208,7 @@ export default function ViewTag() {
             </button>
 
             {/* Message Button */}
-            <button className="flex items-center p-2 bg-green-500 text-white rounded-md">
+            <button className="flex items-center p-2 bg-green-500 text-white rounded-md" onClick={()=>setMessageData(item.name,item.address)}>
               <ChatBubbleLeftIcon className="w-5 h-5 mr-2" /> {/* Adjust icon size and spacing */}
               Message
             </button>

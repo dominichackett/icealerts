@@ -1,8 +1,9 @@
 import { useState,useEffect } from "react";
 import { Chat, ITheme } from '@pushprotocol/uiweb';
 import { useAccountAbstraction } from "../../context/accountContext";
+import { ProposedEventNames } from "@pushprotocol/restapi/src/lib/pushstream/pushStreamTypes";
 
-export default function EmergencyChat(){
+export default function EmergencyChat(props){
     const [se,setPvtKey]  = useState()
     const [account,setAccount] = useState()
     const [signer,setSigner] = useState()
@@ -50,11 +51,12 @@ export default function EmergencyChat(){
     web3Provider ? (
       <Chat
         account={ownerAddress}
-        supportAddress="0x86820D4C1C9E12F5388136B19Da99A153ED767C1"
+        supportAddress={props.addressToMessage} //"0x86820D4C1C9E12F5388136B19Da99A153ED767C1"
         apiKey=""
         signer={signer}
         env='staging'
         theme={theme}
+        modalTitle={props.personToMessage}
       />
     ) : null
   );
