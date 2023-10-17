@@ -30,8 +30,8 @@ export default function VideoCall(props){
     const [signer,setSigner] = useState()
     const [isMicMuted, setMicMuted] = useState(false);
     const [isCameraOff, setCameraOff] = useState(false);
-
-     
+    const [currentCall,setCurrentCall] = useState()
+    const [incomingCall,setIncomingCall] = useState() 
      const { pushSocket, isPushSocketConnected, latestFeedItem } = usePushSocket({
         env,chain:5,address:props.address
       });
@@ -78,10 +78,16 @@ export default function VideoCall(props){
 
   const toggleMic = () => {
     setMicMuted(!isMicMuted);
+    videoObjectRef.current?.enableAudio({
+        state: !data.local.audio,
+      })
   };
 
   const toggleCamera = () => {
     setCameraOff(!isCameraOff);
+    videoObjectRef.current?.enableVideo({
+        state: !data.local.video,
+      })
   };
   const setRequestVideoCall = async () => {
     // fetching chatId between the local address and the remote address
@@ -107,7 +113,7 @@ export default function VideoCall(props){
 
     let chatId = '';
     response.forEach((chat) => {
-      if (chat.did === 'eip155:' + recipientAddressRef?.current?.value) {
+      if (chat.did === 'eip155:' +props.addressTocall) {
         chatId = chat.chatId!;
       }
     });
@@ -117,10 +123,10 @@ export default function VideoCall(props){
     // update the video call 'data' state with the outgoing call data
     videoObjectRef.current?.setData((oldData) => {
       return produce(oldData, (draft: any) => {
-        if (!recipientAddressRef || !recipientAddressRef.current) return;
+        if (!props.addressTocall) return;
 
         draft.local.address = props.address;
-        draft.incoming[0].address = recipientAddressRef.current.value;
+        draft.incoming[0].address = props.addressTocall;
         draft.incoming[0].status = PushAPI.VideoCallStatus.INITIALIZED;
         draft.meta.chatId = chatId;
       });
@@ -293,32 +299,51 @@ export default function VideoCall(props){
             <div className="flex space-x-4">
               <div className="w-1/2">
                 <div >
-                  <VideoPlayer />
+                  <VideoPlayer  stream={data.local.stream} isMuted={true}/>
                   <div className="mt-2 text-center text-white">You</div>
                 </div>
               </div>
               <div className="w-1/2">
                 <div >
-                  <VideoPlayer />
-                  <div className="mt-2 text-center text-white">Other Caller</div>
+                  <VideoPlayer stream={data.incoming[0].stream} isMuted={false} />
+                  <div className="mt-2 text-center text-white">{props?.personTocall ? props.personTocall: "Other Caller"}</div>
                 </div>
               </div>
             </div>
           </div>
   
           <div className="flex justify-center mt-12">
-            <button className={`mr-2 text-white ${isMicMuted ? 'text-red-500' : ''}`} onClick={toggleMic}>
+            <button className={`mr-2 text-white ${isMicMuted ? 'text-red-500' : ''}`} onClick={toggleMic}   disabled={
+                data.incoming[0].status ===
+                PushAPI.VideoCallStatus.UNINITIALIZED
+              }>
               <FontAwesomeIcon icon={isMicMuted ? faMicrophoneSlash : faMicrophone} size="1x" color={isMicMuted ? "red":"white"} /> {isMicMuted ? 'Unmute Mic' : 'Mute Mic'}
             </button>
-            <button className={`mr-2 text-white ${isCameraOff ? 'text-red-500' : ''}`} onClick={toggleCamera}>
+            <button className={`mr-2 text-white ${isCameraOff ? 'text-red-500' : ''}`} onClick={toggleCamera}  disabled={
+                data.incoming[0].status ===
+                PushAPI.VideoCallStatus.UNINITIALIZED
+              }>
               <FontAwesomeIcon icon={isCameraOff ? faVideoSlash : faVideo} size="1x" color={isCameraOff ? "red":"white"} /> {isCameraOff ? 'Turn On Camera' : 'Turn Off Camera'}
             </button>
-            <button className="mr-2 text-red">
-              <FontAwesomeIcon icon={faPhone} size="1x" color="red" /> Leave
-            </button>
-            <button className="mr-2 text-green">
+           {data.incoming[0].status ===
+                PushAPI.VideoCallStatus.CONNECTED && <button className="mr-2 text-red"
+                onClick={() =>
+                    videoObjectRef.current?.disconnect({
+                      peerAddress: data.incoming[0].address,
+                    })
+                  }>
+              <FontAwesomeIcon icon={faPhone} size="1x" color="red" /> Hangup
+            </button>}
+            {(!props.caller && data.incoming[0].status !==
+                PushAPI.VideoCallStatus.RECEIVED) && <button className="mr-2 text-green" onClick={acceptVideoCallRequest}>
               <FontAwesomeIcon icon={faPhoneAlt} size="1x" color="green" /> Answer
-            </button>
+            </button> }
+
+            {(props.caller && data.incoming[0].status !==
+                PushAPI.VideoCallStatus.INITIALIZED) && <button className="mr-2 text-green" onClick={setRequestVideoCall}>
+              <FontAwesomeIcon icon={faPhoneAlt} size="1x" color="green" /> Call
+            </button> }
+
           </div>
         </label>
       </div>

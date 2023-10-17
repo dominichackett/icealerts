@@ -142,7 +142,7 @@ export default function ViewTag() {
 
                     </label>
 </div>
-{(web3ProviderConnected && addressToCall)&&<VideoCall address={ownerAddress} addressToCall={addressToCall} />}
+{(web3ProviderConnected && addressToCall)&&<VideoCall address={ownerAddress} addressToCall={addressToCall} personTocall={personTocall} caller={true} />}
 <div className="mb-8">
    
         <div
@@ -202,7 +202,7 @@ export default function ViewTag() {
           <span>{item.name}</span>
           <div className="flex space-x-4">
             {/* Video Call Button */}
-            <button className="flex items-center p-2 bg-red-500 text-white rounded-md">
+            <button className="flex items-center p-2 bg-red-500 text-white rounded-md" onClick={()=>setCallData(item.name,item.address)}>
               <VideoCameraIcon className="w-5 h-5 mr-2" /> {/* Adjust icon size and spacing */}
               Video Call
             </button>
