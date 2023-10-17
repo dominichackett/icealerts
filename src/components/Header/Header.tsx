@@ -142,41 +142,7 @@ import Link from 'next/link';
                             >
                               Profile
                             </Link>
-                            <Link
-                              href="/createobject"
-                              className="block rounded py-[10px] px-4 text-sm font-medium text-[#bababa] hover:text-white"
-                            >
-                              Create Object
-                            </Link>
-                            <Link
-                              href="/myobjects"
-                              className="block rounded py-[10px] px-4 text-sm font-medium text-[#bababa] hover:text-white"
-                            >
-                              My Objects
-                            </Link>
-                            <Link
-                              href="/myorders"
-                              className="block rounded py-[10px] px-4 text-sm font-medium text-[#bababa] hover:text-white"
-                            >
-                              My Orders                            </Link>
-      
-                           
-                            <Link
-                              href="/printer"
-                              className="block rounded py-[10px] px-4 text-sm font-medium text-[#bababa] hover:text-white"
-                            >
-                              Printer
-                            </Link>
-
-                            <Link
-                              href="/printorders"
-                              className="block rounded py-[10px] px-4 text-sm font-medium text-[#bababa] hover:text-white"
-                            >
-                              Customer Print Orders
-                            </Link>
-
                           
-      
       
                           </div>
                         </li>}

@@ -9,11 +9,11 @@ import {  VideoCameraIcon,ChatBubbleLeftIcon,HeartIcon, MinusIcon, PlusIcon ,XMa
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import Header from '@/components/Header/Header'
 import Footer from '@/components/Footer/Footer'
-import EmergencyChat from '@/components/Chat/EmergencyChat'
-import { useAccountAbstraction } from "../../context/accountContext";
+import Chat from '@/components/Chat/Chat'
 
-import VideoCall from '@/components/VideoCall/VideoCall'
 
+
+import { UserProfilerManagerAddress,UserProfilerManagerABI } from '@/components/Contracts/contracts'
   
   function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
@@ -29,22 +29,30 @@ export default function ViewTag() {
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
     const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x01231"},{name:'Wife',address:"0x01232"},{name:'Mother',address:"0x01233"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
     const [preview, setPreview] = useState('')
-    const [videoCall,setVideoCall] = useState()
-    const closeVideoCall = ()=>{
-        setVideoCall(false)
+    const [selectedFile, setSelectedFile] = useState(undefined)
+ // create a preview as a side effect, whenever selected file is changed
+ useEffect(() => {
+    if (!selectedFile) {
+        setPreview('')
+        return
     }
-    const {
-      isEditingEnabled,
-      isAuthenticated,
-      ownerAddress,
-      chainId,
-      web3Provider,
-      loginWeb3Auth,
-      web3ProviderConnected,
   
-      // ...other context values and functions you need
-    } = useAccountAbstraction();
+    const objectUrl = URL.createObjectURL(selectedFile)
+    setPreview(objectUrl)
   
+    // free memory when ever this component is unmounted
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [selectedFile])
+
+  const onSelectFile = (e) => {
+    if (!e.target.files || e.target.files.length === 0) {
+        setSelectedFile(undefined)
+        return
+    }
+  
+    // I've kept this example simple by using the first image instead of multiple
+    setSelectedFile(e.target.files[0])
+  }
 
   return (
     <div className="bg-black">
@@ -116,6 +124,15 @@ export default function ViewTag() {
           
         
                          <div className="mb-8">
+
+                         <input
+    required={!selectedFile ? true: false}
+    type="file"
+    name="file"
+    id="file"
+    className="sr-only"
+    onChange={onSelectFile}
+  />
   
    <label
                       for="file"
@@ -125,47 +142,27 @@ export default function ViewTag() {
 
                     </label>
 </div>
-<VideoCall />
 <div className="mb-8">
-   
+        <Chat />
         <div
        
           className="mb-4 text-white rounded-md bg-[#4E4C64] flex items-center justify-center rounded-md py-4 px-8 border border-dashed border-[#A1A0AE] bg-[#353444]"
         >
-                   <div className=" mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
-            <h1 className="text-3xl font-bold tracking-tight text-white">ICE Tag Information</h1>
+                   <div className=" mt-16 px-4 sm:mt-16 sm:px-0 lg:mt-0">
+            <h1 className=" text-3xl font-bold tracking-tight text-white">ICE Tag ID</h1>
 
             <div className="mt-4 sm:col-span-3">
-              <label htmlFor="country" className="block text-sm font-medium leading-6 text-white">
-                ICE Tag ID
-              </label>
-              <div className="mt-2">
-                <input
-                  id="tagid"
-                  name="tagid"
-                  autoComplete="tagid"
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
-                />
-                  
+             
+              <div className="mt-2 mb-12">
+              <h1 className="text-5xl font-bold tracking-tight text-green-500">1234567890</h1>
+
               </div>
             </div>
 
         
 
             
-              <div className="sm:flex-col1 mt-10 flex">
-               
-                <button
-                                    
-                
-                  className="flex max-w-xs flex-1 items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50 sm:w-full"
-                >
-                  View Tag
-                </button>
-
-              </div>
-        
-
+            
       
           </div>
           
@@ -174,7 +171,6 @@ export default function ViewTag() {
     </div>
  
 <div className="mb-8">
-  <EmergencyChat address={ownerAddress} />
 <h1 className="mb-4 text-3xl font-bold tracking-tight text-white">App Emergency Contacts</h1>
 
       {contacts.map((item, index) => (
@@ -183,19 +179,7 @@ export default function ViewTag() {
           className="mb-4 text-white rounded-md bg-[#4E4C64] flex justify-between rounded-md py-4 px-8 border border-dashed border-[#A1A0AE] bg-[#353444]"
         >
           <span>{item.name}</span>
-          <div className="flex space-x-4">
-            {/* Video Call Button */}
-            <button className="flex items-center p-2 bg-red-500 text-white rounded-md">
-              <VideoCameraIcon className="w-5 h-5 mr-2" /> {/* Adjust icon size and spacing */}
-              Video Call
-            </button>
-
-            {/* Message Button */}
-            <button className="flex items-center p-2 bg-green-500 text-white rounded-md">
-              <ChatBubbleLeftIcon className="w-5 h-5 mr-2" /> {/* Adjust icon size and spacing */}
-              Message
-            </button>
-          </div>
+         
         </div>
       ))}
     </div>
@@ -205,7 +189,7 @@ export default function ViewTag() {
        
           {/* Product info */}
           <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
-            <h1 className="text-3xl font-bold tracking-tight text-white">Tag Information</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white">ICE Tag Information</h1>
 
             <div className="mt-4 sm:col-span-3">
               <label htmlFor="country" className="block text-sm font-medium leading-6 text-white">
@@ -366,7 +350,19 @@ export default function ViewTag() {
            
 
             
-            
+            <div className="sm:flex-col1 mt-10 flex">
+               
+               <button
+                                   
+               
+                 className="flex max-w-xs flex-1 items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50 sm:w-full"
+               >
+                 Save Tag
+               </button>
+
+             </div>
+       
+
 
       
           </div>

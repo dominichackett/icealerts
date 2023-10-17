@@ -50,7 +50,7 @@ export default function Home() {
            ICE Alerts is a remarkable DApp designed to empower users in creating smart medical tags on the blockchain. This innovative platform leverages the decentralized nature of blockchain technology, enabling individuals to securely store and manage their vital medical information, emergency contacts, and critical health details. By doing so, ICE Alerts not only ensures the privacy and integrity of this crucial data but also provides an accessible and reliable solution for generating life-saving smart medical tags. Whether for individuals with medical conditions, allergies, or simply a desire for preparedness, ICE Alerts exemplifies the transformative potential of DApps in delivering essential services with transparency, security, and trust.     </p>
          <div className="flex flex-wrap items-center">
                 <Link
-                  href="/tag"
+                  href="/viewtag"
                   className="mr-5 mb-5 inline-flex items-center justify-center rounded-md border-2 border-primary bg-primary py-3 px-7 text-base font-semibold text-white transition-all hover:bg-opacity-90"
                 >
                   View Tag
