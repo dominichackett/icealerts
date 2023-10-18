@@ -1,21 +1,24 @@
 
 'use client'
 import { Fragment, useState,useEffect } from 'react'
-import { Dialog, Tab, Transition,Menu } from '@headlessui/react'
-import { Disclosure, RadioGroup } from '@headlessui/react'
-import { StarIcon } from '@heroicons/react/20/solid'
-import {  VideoCameraIcon,ChatBubbleLeftIcon,HeartIcon, MinusIcon, PlusIcon ,XMarkIcon} from '@heroicons/react/24/outline'
+import { Dialog, Tab, Transition } from '@headlessui/react'
+import {XMarkIcon} from '@heroicons/react/24/outline'
 
-import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import Header from '@/components/Header/Header'
 import Footer from '@/components/Footer/Footer'
 import Chat from '@/components/Chat/Chat'
 
 import { useAccountAbstraction } from "../../context/accountContext";
 
+import lit from "@/lit/lit"
 
-import { UserProfilerManagerAddress,UserProfilerManagerABI } from '@/components/Contracts/contracts'
-  
+import DatePicker from "react-datepicker";
+
+import "react-datepicker/dist/react-datepicker.css";
+import { useFormik } from 'formik';
+import * as Yup from 'yup' 
+import { queryTagByOwner } from '@/tableland/tableland'
+
   function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
   }
@@ -24,13 +27,52 @@ import { UserProfilerManagerAddress,UserProfilerManagerABI } from '@/components/
 
 
 
-
+  
 export default function ViewTag() {
     const [open, setOpen] = useState(false)
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
     const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x01231"},{name:'Wife',address:"0x01232"},{name:'Mother',address:"0x01233"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
     const [preview, setPreview] = useState('')
     const [selectedFile, setSelectedFile] = useState(undefined)
+    const [dob, setDOB] = useState(new Date());
+    const [tagFound,setTagFound] = useState(false)
+    const [tagQueried,setTagQueried] = useState(false)
+    const [tag,setTag] = useState()
+   const formik = useFormik({initialValues:{firstname:'',lastname:'',bloodtype:'',address:'',allergies:'None',emergencycontacts:'',otherinfo:'NA',dob:dob,bloodtype:""}
+    ,validationSchema: Yup.object().shape({
+      firstname:Yup.string().required("First name is required"),
+      lastname:Yup.string().required("Last name is required"),
+      address:Yup.string().required("Address is required"),
+      dob:Yup.date()
+      .transform(function (value, originalValue) {
+        if (this.isType(value)) {
+          return value;
+        }
+        const result = parse(originalValue, "dd.MM.yyyy", new Date());
+        return result;
+      })
+      .typeError("please enter a valid date")
+      .required(),
+      bloodtype:Yup.string().required("Blood type is required"),
+
+      allergies:Yup.string().required("Allergies is required"),
+      emergencycontacts:Yup.string().required("Emergency contacts are required"),
+      otherinfo:Yup.string().required("Other Info is required")
+  
+     
+  }), onSubmit: async (values) => {
+   if(!selectedFile)
+     return
+    const x = await lit.encryptString("Hi there. Secret message")
+    console.log(x)
+
+    const text = await lit.decryptString(x.ciphertext,x.dataToEncryptHash)
+    console.log(text)
+  },
+
+      
+
+   })
  // create a preview as a side effect, whenever selected file is changed
  const {
   isEditingEnabled,
@@ -74,6 +116,25 @@ useEffect(() => {
     setSelectedFile(e.target.files[0])
   }
 
+ useEffect(()=>{
+  async function getTagInfo()
+  {
+       const _tag = await queryTagByOwner(ownerAddress)
+       if(_tag.lenght > 0)
+       {
+          setTagFound(true)
+          setTagQueried(true)
+          setTag(_tag[0])
+       }
+
+       else
+       {
+         setTagQueried(true)
+       }
+  }     
+  if(web3ProviderConnected)
+    getTagInfo()
+ },[web3ProviderConnected])
   return (
     <div className="bg-black">
       {/* Mobile menu */}
@@ -156,11 +217,14 @@ useEffect(() => {
   
    <label
                       for="file"
-                      className="cursor-pointer relative flex h-[480px] min-h-[200px] items-center justify-center rounded-lg border border-dashed border-[#A1A0AE] bg-[#353444] p-12 text-center"
+                      className="cursor-pointer relative flex flex-col h-[480px] min-h-[200px] items-center justify-center rounded-lg border border-dashed border-[#A1A0AE] bg-[#353444] p-12 text-center"
                     >
                                            <img src={preview ? preview: '/images/profile.jpg'}/>
+                                           {formik.touched && !selectedFile ?    <span className="text-red mt-4 font-bold ">Please select an image</span>:null}
+
 
                     </label>
+
 </div>
 <div className="mb-8">
 {web3ProviderConnected  &&   <Chat address={ownerAddress}/>}
@@ -174,7 +238,7 @@ useEffect(() => {
             <div className="mt-4 sm:col-span-3">
              
               <div className="mt-2 mb-12">
-              <h1 className="text-5xl font-bold tracking-tight text-green-500">1234567890</h1>
+              <h1 className="text-5xl font-bold tracking-tight text-green-500">{tag?.id ? tag.id :"----------"}</h1>
 
               </div>
             </div>
@@ -208,7 +272,8 @@ useEffect(() => {
           </Tab.Group>
        
           {/* Product info */}
-          <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
+           <form onSubmit={formik.handleSubmit}>
+           <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
             <h1 className="text-3xl font-bold tracking-tight text-white">ICE Tag Information</h1>
 
             <div className="mt-4 sm:col-span-3">
@@ -221,7 +286,11 @@ useEffect(() => {
                   name="firstname"
                   autoComplete="firstname"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
+
+                  {formik.errors.firstname  && formik.touched.firstname?    <span className="text-red mt-4 font-bold ">{formik.errors.firstname}</span>:null}
+
                   
               </div>
             </div>
@@ -236,7 +305,9 @@ useEffect(() => {
                   name="lastname"
                   autoComplete="lastname"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
+                  {formik.errors.lastname && formik.touched.lastname ?    <span className="text-red mt-4 font-bold ">{formik.errors.lastname}</span>:null}
                   
               </div>
             </div>
@@ -245,24 +316,21 @@ useEffect(() => {
                 Date of Birth
               </label>
               <div className="mt-2">
-                <input
-                  id="dob"
-                  name="dob"
-                  autoComplete="dob"
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
-                />
-                  
+              <DatePicker selected={dob}  onChange={(value)=>setDOB(value)} />
+  
               </div>
+              {formik.errors.dob && formik.touched.dob ?    <span className="text-red mt-4 font-bold ">{formik.errors.dob}</span>:null}
+
             </div>
 
             <div className="mt-4 sm:col-span-3">
-            <label htmlFor="bloodTypeSelect"  className="block text-sm font-medium leading-6 text-white">Blood Type:</label>
+            <label htmlFor="bloodtype"  className="block text-sm font-medium leading-6 text-white">Blood Type:</label>
 
               <div className="mt-2">
       <select
-        id="bloodTypeSelect"
+        id="bloodtype"
         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
-
+        onChange={formik.handleChange}
       >
         <option value="">Select a blood type</option>
         {bloodTypes.map((type) => (
@@ -271,6 +339,8 @@ useEffect(() => {
           </option>
         ))}
       </select> 
+      {formik.errors.bloodtype && formik.touched.bloodtype ?    <span className="text-red mt-4 font-bold ">{formik.errors.bloodtype}</span>:null}
+          
               </div>
             </div>
 
@@ -301,9 +371,12 @@ useEffect(() => {
                   name="address"
                   rows={5}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
                   
               </div>
+              {formik.errors.address && formik.touched.address ?    <span className="text-red mt-4 font-bold ">{formik.errors.address}</span>:null}
+
             </div>
 
           
@@ -317,10 +390,15 @@ useEffect(() => {
                   id="allergies"
                   name="allergies"
                   rows={10}
+                  defaultValue={'Unknown'}
+
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
                   
               </div>
+              {formik.errors.allergies && formik.touched.allergies ?    <span className="text-red mt-4 font-bold ">{formik.errors.allergies}</span>:null}
+
             </div>
 
             <div className="mt-4 sm:col-span-3">
@@ -329,28 +407,35 @@ useEffect(() => {
               </label>
               <div className="mt-2">
               <textarea
-                  id="medication"
-                  name="medication"
+                  id="medications"
+                  name="medications"
+
                   rows={10}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
                   
               </div>
+              {formik.errors.medications && formik.touched.medications ?    <span className="text-red mt-4 font-bold ">{formik.errors.medications}</span>:null}
+
             </div>
            
             <div className="mt-4 sm:col-span-3">
-              <label htmlFor="emergencycontact" className="block text-sm font-medium leading-6 text-white">
+              <label htmlFor="emergencycontacts" className="block text-sm font-medium leading-6 text-white">
                 Emergency Contacts
               </label>
               <div className="mt-2">
               <textarea
-                  id="emergencycontact"
-                  name="emergencycontact"
+                  id="emergencycontacts"
+                  name="emergencycontacts"
                   rows={10}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
                   
               </div>
+              {formik.errors.emergencycontacts && formik.touched.emergencycontacts ?    <span className="text-red mt-4 font-bold ">{formik.errors.emergencycontacts}</span>:null}
+
             </div>
            
             <div className="mt-4 sm:col-span-3">
@@ -359,22 +444,25 @@ useEffect(() => {
               </label>
               <div className="mt-2">
               <textarea
-                  id="other"
-                  name="other"
+                  id="otherinfo"
+                  name="otherinfo"
+
                   rows={10}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onChange={formik.handleChange}
                 />
                   
               </div>
+              {formik.errors.otherinfo && formik.touched.otherinfo ?    <span className="text-red mt-4 font-bold ">{formik.errors.otherinfo}</span>:null}
+
             </div>
            
-
             
             <div className="sm:flex-col1 mt-10 flex">
                
                <button
                                    
-               
+                 type="submit"
                  className="flex max-w-xs flex-1 items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50 sm:w-full"
                >
                  Save Tag
@@ -386,6 +474,8 @@ useEffect(() => {
 
       
           </div>
+          </form>
+
         </div>
       </div>
     </div>
