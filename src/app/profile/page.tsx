@@ -11,6 +11,7 @@ import Header from '@/components/Header/Header'
 import Footer from '@/components/Footer/Footer'
 import Chat from '@/components/Chat/Chat'
 
+import { useAccountAbstraction } from "../../context/accountContext";
 
 
 import { UserProfilerManagerAddress,UserProfilerManagerABI } from '@/components/Contracts/contracts'
@@ -31,6 +32,25 @@ export default function ViewTag() {
     const [preview, setPreview] = useState('')
     const [selectedFile, setSelectedFile] = useState(undefined)
  // create a preview as a side effect, whenever selected file is changed
+ const {
+  isEditingEnabled,
+  isAuthenticated,
+  ownerAddress,
+  chainId,
+  privateKey,
+  web3Provider,
+  loginWeb3Auth,
+  web3ProviderConnected,
+
+  // ...other context values and functions you need
+} = useAccountAbstraction();
+
+
+useEffect(() => {
+  loginWeb3Auth();
+ 
+}, []);
+
  useEffect(() => {
     if (!selectedFile) {
         setPreview('')
@@ -143,7 +163,7 @@ export default function ViewTag() {
                     </label>
 </div>
 <div className="mb-8">
-        <Chat />
+{web3ProviderConnected  &&   <Chat address={ownerAddress}/>}
         <div
        
           className="mb-4 text-white rounded-md bg-[#4E4C64] flex items-center justify-center rounded-md py-4 px-8 border border-dashed border-[#A1A0AE] bg-[#353444]"

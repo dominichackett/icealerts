@@ -60,6 +60,17 @@ export const mumbaiChain: Chain = {
   faucetUrl: 'https://mumbaifaucet.com/'
 }
 */
+export const goerliChain: Chain = {
+  id: '0x5',
+  token: 'gETH',
+  label: 'Görli',
+  shortName: 'gor',
+  rpcUrl: 'https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+  blockExplorerUrl: 'https://goerli.etherscan.io',
+  color: '#fbc02d',
+  transactionServiceUrl: 'https://safe-transaction-goerli.safe.global',
+  isStripePaymentsEnabled: false
+}
 
 export const optimismGoerli: Chain = {
   id: '0x1a4',
@@ -104,7 +115,7 @@ export const modeTestnet: Chain = {
   color: '#3e6957',
   isStripePaymentsEnabled: false
 }
-const chains: Chain[] = [optimismGoerli,baseGoerli,zoraGoerli,modeTestnet]
+const chains: Chain[] = [optimismGoerli,baseGoerli,zoraGoerli,modeTestnet,goerliChain]
 
 export const initialChain = optimismGoerli
 

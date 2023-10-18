@@ -11,10 +11,11 @@ import Header from '@/components/Header/Header'
 import Footer from '@/components/Footer/Footer'
 import EmergencyChat from '@/components/Chat/EmergencyChat'
 import { useAccountAbstraction } from "../../context/accountContext";
-
+import Chat from '@/components/Chat/Chat'
 import VideoCall from '@/components/VideoCall/VideoCall'
-
-  
+import { ethers } from 'ethers'
+import Notification from '@/components/Notification/Notification'  
+import { sendNotifications } from '../../../utils/utils'
   function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
   }
@@ -27,13 +28,21 @@ import VideoCall from '@/components/VideoCall/VideoCall'
 export default function ViewTag() {
     const [open, setOpen] = useState(false)
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x86820D4C1C9E12F5388136B19Da99A153ED767C1"},{name:'Wife',address:"0x01232"},{name:'Mother',address:"0x01233"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
+    const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x86820D4C1C9E12F5388136B19Da99A153ED767C1"},{name:'Wife',address:"0x261Fa191c834dC513C6e18AC0f663e049968da0C"},{name:'Mother',address:"0xebdCf3649366505F8dB5D1946dc03Fa186257dec"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
     const [preview, setPreview] = useState('')
     const [videoCall,setVideoCall] = useState()
     const [addressToCall,setAddressToCall] = useState()
     const [personTocall,setPersonTocall] = useState()
     const [personToMessage,setPersonToMessage] = useState()
     const [addressToMessage,setAddresToMessage] = useState()
+     // NOTIFICATIONS functions
+    const [notificationTitle, setNotificationTitle] = useState();
+    const [notificationDescription, setNotificationDescription] = useState();
+    const [dialogType, setDialogType] = useState(1);
+    const [show, setShow] = useState(false);
+    const close = async () => {
+      setShow(false);
+     };
     const closeVideoCall = ()=>{
         setVideoCall(false)
     }
@@ -42,6 +51,7 @@ export default function ViewTag() {
       isAuthenticated,
       ownerAddress,
       chainId,
+      privateKey,
       web3Provider,
       loginWeb3Auth,
       web3ProviderConnected,
@@ -51,17 +61,48 @@ export default function ViewTag() {
   
     useEffect(() => {
       loginWeb3Auth();
+     
     }, []);
+
+    useEffect(()=>{
+
+      if(web3ProviderConnected)
+      {
+        const wallet = new ethers.Wallet(privateKey)
+        console.log(wallet.address)
+
+      }
+    },[web3ProviderConnected])
   
     const setCallData=(name:any,address:any)=>{
+      if(!isAuthenticated)
+      {
+         setDialogType(2) //Error
+         setNotificationTitle("View Tag")
+         setNotificationDescription("Please login to place call.")
+         setShow(true)
+         return
+      }
       setPersonTocall(name)
       setAddressToCall(address)
     }
 
-
+   
     const setMessageData=(name:any,address:any)=>{
+       
+      if(!isAuthenticated)
+      {
+         setDialogType(2) //Error
+         setNotificationTitle("View Tag")
+         setNotificationDescription("Please login to send message.")
+         setShow(true)
+         return
+      }
        setPersonToMessage(name)
        setAddresToMessage(address)   
+    }
+    const tagScanned = async()=> {
+      await sendNotifications("Tag Scanned","Dominic Hackett",['eip155:5:0x261Fa191c834dC513C6e18AC0f663e049968da0C','eip155:5:0xebdCf3649366505F8dB5D1946dc03Fa186257dec'])
     }
   return (
     <div className="bg-black">
@@ -176,7 +217,7 @@ export default function ViewTag() {
                                     
                 
                   className="flex max-w-xs flex-1 items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50 sm:w-full"
-                >
+                onClick={()=> tagScanned()}>
                   View Tag
                 </button>
 
@@ -391,7 +432,13 @@ export default function ViewTag() {
       </div>
     </div>
         </main>
-
+        <Notification
+        type={dialogType}
+        show={show}
+        close={close}
+        title={notificationTitle}
+        description={notificationDescription}
+      />
  <Footer />
     </div>
   )

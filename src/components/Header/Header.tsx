@@ -143,7 +143,12 @@ import Link from 'next/link';
                               Profile
                             </Link>
                           
-      
+                            <Link
+                              href="/applogin"
+                              className="block rounded py-[10px] px-4 text-sm font-medium text-[#bababa] hover:text-white"
+                            >
+                              App Login
+                            </Link>
                           </div>
                         </li>}
 
