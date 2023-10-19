@@ -23,7 +23,7 @@ interface VideoCallMetaDataType {
 }
 
 // env which will be used for the video call
-const env = ENV.DEV;
+const env = ENV.STAGING;
 export default function VideoCall(props){
     const [se,setPvtKey]  = useState()
     const [account,setAccount] = useState()
@@ -90,11 +90,13 @@ export default function VideoCall(props){
       })
   };
   const setRequestVideoCall = async () => {
+    setCurrentCall(true)
     // fetching chatId between the local address and the remote address
     const user = await PushAPI.user.get({
       account: props.address!,
       env,
     });
+    console.log(props.address)
     let pgpPrivateKey = null;
     if (user?.encryptedPrivateKey) {
       pgpPrivateKey = await PushAPI.chat.decryptPGPKey({
@@ -104,29 +106,32 @@ export default function VideoCall(props){
         env,
       });
     }
+    console.log(user)
     const response = await PushAPI.chat.chats({
       account: props.address!,
       toDecrypt: true,
       pgpPrivateKey: pgpPrivateKey,
       env,
     });
-
+   console.log(response)
     let chatId = '';
-    response.forEach((chat) => {
-      if (chat.did === 'eip155:' +props.addressTocall) {
-        chatId = chat.chatId!;
+    for (const chat of response) {
+      if (chat.did === 'eip155:' + props.addressToCall) {
+        chatId = chat.chatId;
+        console.log("Chatting");
+        break; // Exit the loop when a match is found, assuming you only need one chat.
       }
-    });
-
+    }
+    console.log(chatId)
     if (!chatId) return;
 
     // update the video call 'data' state with the outgoing call data
     videoObjectRef.current?.setData((oldData) => {
       return produce(oldData, (draft: any) => {
-        if (!props.addressTocall) return;
+        if (!props.addressToCall) return;
 
         draft.local.address = props.address;
-        draft.incoming[0].address = props.addressTocall;
+        draft.incoming[0].address = props.addressToCall;
         draft.incoming[0].status = PushAPI.VideoCallStatus.INITIALIZED;
         draft.meta.chatId = chatId;
       });
@@ -151,11 +156,15 @@ export default function VideoCall(props){
         draft.meta.initiator.signal = videoCallMetaData.signalData;
       });
     });
-
+     console.log("Start the thing")
+     console.log(videoCallMetaData)
+     console.log(videoObjectRef.current)
     // start the local media stream
     await videoObjectRef.current?.create({ video: true, audio: true });
+    setCurrentCall(true)
   };
   const acceptVideoCallRequest = async () => {
+      console.log(data.local)
     if (!data.local.stream) return;
 
     await videoObjectRef.current?.acceptRequest({
@@ -170,7 +179,7 @@ export default function VideoCall(props){
     signalData,
     senderAddress,
   }: VideoCallMetaDataType) => {
-    videoObjectRef.current?.connect({
+   videoObjectRef.current?.connect({
       signalData,
       peerAddress: senderAddress,
     });
@@ -250,9 +259,11 @@ export default function VideoCall(props){
     if (additionalMeta.type !== `${ADDITIONAL_META_TYPE.PUSH_VIDEO}+1`) return;
     const videoCallMetaData = JSON.parse(additionalMeta.data);
     console.log('RECIEVED VIDEO DATA', videoCallMetaData);
+    setIncomingCall(true)
 
     if (videoCallMetaData.status === PushAPI.VideoCallStatus.INITIALIZED) {
       setIncomingVideoCall(videoCallMetaData);
+      console.log("Incoming Call Data")
     } else if (
       videoCallMetaData.status === PushAPI.VideoCallStatus.RECEIVED ||
       videoCallMetaData.status === PushAPI.VideoCallStatus.RETRY_RECEIVED
@@ -286,6 +297,13 @@ export default function VideoCall(props){
     }
   }, [latestFeedItem]);
 
+  const hangUp = async()=>{
+    videoObjectRef.current?.disconnect({
+      peerAddress: data.incoming[0].address,
+    })
+    setCurrentCall(false)
+  }
+
    return (
     web3Provider ? (
         <div className="mb-8 relative">
@@ -293,8 +311,13 @@ export default function VideoCall(props){
           htmlFor="file"
           className="cursor-pointer relative flex flex-col h-[500px] min-h-[200px] items-center justify-center rounded-lg border border-dashed border-[#A1A0AE] bg-[#353444] p-12 text-center"
         >
-                        <h1 className="mb-10 text-3xl font-bold tracking-tight text-white">Incoming Call</h1>
+{(incomingCall && !props.caller && !currentCall ) && (
+  <h1 className="mb-10 text-3xl font-bold tracking-tight text-white animate-blink">Incoming Call</h1>
+)}
 
+{(props.caller && currentCall ) && (
+  <h1 className="mb-10 text-3xl font-bold tracking-tight text-white animate-blink">Outgoing Call</h1>
+)}
           <div className="mb-4">
             <div className="flex space-x-4">
               <div className="w-1/2">
@@ -325,25 +348,21 @@ export default function VideoCall(props){
               }>
               <FontAwesomeIcon icon={isCameraOff ? faVideoSlash : faVideo} size="1x" color={isCameraOff ? "red":"white"} /> {isCameraOff ? 'Turn On Camera' : 'Turn Off Camera'}
             </button>
-           {data.incoming[0].status ===
-                PushAPI.VideoCallStatus.CONNECTED && <button className="mr-2 text-red"
-                onClick={() =>
-                    videoObjectRef.current?.disconnect({
-                      peerAddress: data.incoming[0].address,
-                    })
+           {currentCall    && <button className="mr-2 text-red"
+                onClick={() => hangUp()
+                   
                   }>
               <FontAwesomeIcon icon={faPhone} size="1x" color="red" /> Hangup
             </button>}
-            {(!props.caller && data.incoming[0].status !==
-                PushAPI.VideoCallStatus.RECEIVED) && <button className="mr-2 text-green" onClick={acceptVideoCallRequest}>
+            {(!props.caller && data.incoming[0].status ===
+                PushAPI.VideoCallStatus.RECEIVED && incomingCall) && <button className="mr-2 text-green" onClick={acceptVideoCallRequest}>
               <FontAwesomeIcon icon={faPhoneAlt} size="1x" color="green" /> Answer
             </button> }
 
-            {(props.caller && data.incoming[0].status !==
-                PushAPI.VideoCallStatus.INITIALIZED) && <button className="mr-2 text-green" onClick={setRequestVideoCall}>
+            {(props.caller && !currentCall) && <button className="mr-2 text-green" onClick={setRequestVideoCall}>
               <FontAwesomeIcon icon={faPhoneAlt} size="1x" color="green" /> Call
             </button> }
-
+           <span className="text-red">{data.incoming[0].status }</span>
           </div>
         </label>
       </div>

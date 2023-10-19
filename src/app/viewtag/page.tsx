@@ -16,6 +16,10 @@ import VideoCall from '@/components/VideoCall/VideoCall'
 import { ethers } from 'ethers'
 import Notification from '@/components/Notification/Notification'  
 import { sendNotifications } from '../../../utils/utils'
+import { queryTagById,queryEmergencyContacts } from '@/tableland/tableland'
+import lit from "@/lit/lit"
+import { Web3Storage, File } from "web3.storage";
+
   function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
   }
@@ -35,6 +39,12 @@ export default function ViewTag() {
     const [personTocall,setPersonTocall] = useState()
     const [personToMessage,setPersonToMessage] = useState()
     const [addressToMessage,setAddresToMessage] = useState()
+    const [tagFound,setTagFound] = useState(false)
+    const [tagQueried,setTagQueried] = useState(false)
+    const [tag,setTag] = useState()
+    const [storage] = useState(
+      new Web3Storage({ token: process.env.NEXT_PUBLIC_WEB3_STORAGE_KEY })
+    );
      // NOTIFICATIONS functions
     const [notificationTitle, setNotificationTitle] = useState();
     const [notificationDescription, setNotificationDescription] = useState();
@@ -102,8 +112,75 @@ export default function ViewTag() {
        setAddresToMessage(address)   
     }
     const tagScanned = async()=> {
-      await sendNotifications("Tag Scanned","Dominic Hackett",['eip155:5:0x261Fa191c834dC513C6e18AC0f663e049968da0C','eip155:5:0xebdCf3649366505F8dB5D1946dc03Fa186257dec'])
+      const tagid = document.getElementById("tagid").value  
+      if(!tagid || tagid =="" || tagid == undefined)
+      {
+        setNotificationTitle("View Tag")
+        setNotificationDescription("Please enter a tag id")
+        setDialogType(2) //Error
+        setShow(true)
+        return
+      }
+      setTag(null)
+      setContacts([])
+      setPreview(null)
+      const _tag = await queryTagById(tagid)
+      if(_tag.lenght > 0)
+      {
+        setNotificationTitle("View Tag")
+        setNotificationDescription("Tag id found")
+        setDialogType(1) //Success
+        setShow(true)  
+        const _contacts = await queryEmergencyContacts(_tag[0].owner)
+        if(_contacts.lenght > 0)
+        {
+            let notificationList = []
+            let contactList = []
+            for(const _contact in _contacts)
+            {
+               notificationList.push(`eip155:5:${_contacts[_contact].address}`)
+               contactList.push({name:_contacts[_contact].contact,address:_contacts[_contact].address})
+            }
+            setContacts(contactList)
+            const _date = new Date()
+
+            //Push Protocol Notification
+            await sendNotifications(`Tag ID: ${tagid} Scanned`,`Date: ${_date.toDateString()}`,notificationList)
+            
+            
+            //get Metadata
+            const res = await storage.get(_tag[0].cid)
+      console.log(`Got a response! [${res.status}] ${res.statusText}`)
+      if (!res.ok) {
+        setNotificationTitle("View Tag")
+        setNotificationDescription("Error getting medical data")
+        setDialogType(2) //Error
+        setShow(true)
+        return
+      }
+    
+      // unpack File objects from the response
+       const files = await res.files()
+      const textContent = await files[0].text();
+      const obj = JSON.parse(textContent)
+      const decryptedData = await lit.decryptString(ob.data,obj.hash)
+      setTag(decryptedData)
+      setPreview( `https://ipfs.io/ipfs/${decryptedData.cid}/${decryptedData.image}`)
+      
+      }
+      else{
+
+        setNotificationTitle("View Tag")
+        setNotificationDescription("Tag id not found")
+        setDialogType(2) //Error
+        setShow(true)
+        return
+      }
+      
+    
     }
+
+  } 
   return (
     <div className="bg-black">
       {/* Mobile menu */}
@@ -218,7 +295,7 @@ export default function ViewTag() {
                 
                   className="flex max-w-xs flex-1 items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50 sm:w-full"
                 onClick={()=> tagScanned()}>
-                  View Tag
+                  Search Tag
                 </button>
 
               </div>

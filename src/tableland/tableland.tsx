@@ -11,20 +11,30 @@ const db = new Database({signer})
 
 
 export const queryEmergencyContacts = async(owner:string)=>{
-
+    try {
     const { results } = await db.prepare(`SELECT * FROM ${emergencycontactsTable} where owner='${owner}'  order by contract;`).all();
 
    return results;
+}
+catch(error:any)
+{
+    return []
+}
 
 }
 
 
 export const queryMessage = async(owner:string)=>{
 
+    try{
     const { results } = await db.prepare(`SELECT * FROM ${messageTable} where owner='${owner}';`).all();
 
    return results;
-
+   }
+   catch(error:any)
+   {
+    return []  
+   }
 }
 
 

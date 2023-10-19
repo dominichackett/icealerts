@@ -105,3 +105,18 @@ i {
   margin-right: 0.5em;
 }
 
+
+
+
+/* In your stylesheet or within your React component */
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

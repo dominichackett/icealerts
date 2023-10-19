@@ -20,6 +20,7 @@ import * as Yup from 'yup'
 import { queryTagByOwner } from '@/tableland/tableland'
 import { Web3Storage, File } from "web3.storage";
 import Notification from '@/components/Notification/Notification'
+import VideoCall from '@/components/VideoCall/VideoCall'
   function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
   }
@@ -91,6 +92,7 @@ export default function ViewTag() {
 
     const cid = await storage.put([new File([selectedFile],filename.current)]);
     values.cid = cid
+    values.image = filename.current
     //console.log(values)
     
     const encryptedData = await lit.encryptString(JSON.stringify(values))
@@ -266,6 +268,8 @@ useEffect(() => {
                     </label>
 
 </div>
+{(web3ProviderConnected )&&<VideoCall address={ownerAddress}  />}
+
 <div className="mb-8">
 {web3ProviderConnected  &&   <Chat classNames="z-10" address={ownerAddress}/>}
         <div
