@@ -1,6 +1,6 @@
 
 'use client'
-import { Fragment, useState,useEffect } from 'react'
+import { Fragment, useState,useEffect,useRef } from 'react'
 import { Dialog, Tab, Transition } from '@headlessui/react'
 import {XMarkIcon} from '@heroicons/react/24/outline'
 
@@ -18,7 +18,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useFormik } from 'formik';
 import * as Yup from 'yup' 
 import { queryTagByOwner } from '@/tableland/tableland'
-
+import { Web3Storage, File } from "web3.storage";
+import Notification from '@/components/Notification/Notification'
   function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
   }
@@ -38,6 +39,20 @@ export default function ViewTag() {
     const [tagFound,setTagFound] = useState(false)
     const [tagQueried,setTagQueried] = useState(false)
     const [tag,setTag] = useState()
+    const filename = useRef()
+
+      // NOTIFICATIONS functions
+    const [notificationTitle, setNotificationTitle] = useState();
+    const [notificationDescription, setNotificationDescription] = useState();
+    const [dialogType, setDialogType] = useState(1);
+    const [show, setShow] = useState(false);
+    const close = async () => {
+  setShow(false);
+};
+
+    const [storage] = useState(
+      new Web3Storage({ token: process.env.NEXT_PUBLIC_WEB3_STORAGE_KEY })
+    );
    const formik = useFormik({initialValues:{firstname:'',lastname:'',bloodtype:'',address:'',allergies:'None',emergencycontacts:'',otherinfo:'NA',dob:dob,bloodtype:""}
     ,validationSchema: Yup.object().shape({
       firstname:Yup.string().required("First name is required"),
@@ -61,13 +76,34 @@ export default function ViewTag() {
   
      
   }), onSubmit: async (values) => {
-   if(!selectedFile)
+   
+   if(!selectedFile || !tagQueried)
      return
-    const x = await lit.encryptString("Hi there. Secret message")
-    console.log(x)
 
-    const text = await lit.decryptString(x.ciphertext,x.dataToEncryptHash)
-    console.log(text)
+     if(tagQueried && !tagFound)
+     {
+      setNotificationTitle("Save Profile")
+      setNotificationDescription("You must first register a tag with your mobile device")
+      setDialogType(2) //Error
+      setShow(true)
+      return
+     }
+
+    const cid = await storage.put([new File([selectedFile],filename.current)]);
+    values.cid = cid
+    //console.log(values)
+    
+    const encryptedData = await lit.encryptString(JSON.stringify(values))
+    console.log(encryptedData)
+
+    const decryptedData = await lit.decryptString(encryptedData.ciphertext,encryptedData.dataToEncryptHash)
+    console.log(JSON.parse(decryptedData))
+    const data = {data:encryptedData.ciphertext,hash:encryptedData.dataToEncryptHash}
+    const dataCID = await storage.put([
+      new File([JSON.stringify(data)], "metadata.json"),
+    ]);
+
+    //Do Smart Contract Calls here
   },
 
       
@@ -114,12 +150,14 @@ useEffect(() => {
   
     // I've kept this example simple by using the first image instead of multiple
     setSelectedFile(e.target.files[0])
+    filename.current = e.target.files[0].name
   }
 
  useEffect(()=>{
   async function getTagInfo()
   {
        const _tag = await queryTagByOwner(ownerAddress)
+       console.log(tag)
        if(_tag.lenght > 0)
        {
           setTagFound(true)
@@ -129,11 +167,13 @@ useEffect(() => {
 
        else
        {
+        console.log("not found")
          setTagQueried(true)
        }
   }     
   if(web3ProviderConnected)
     getTagInfo()
+  console.log("KKK")
  },[web3ProviderConnected])
   return (
     <div className="bg-black">
@@ -227,7 +267,7 @@ useEffect(() => {
 
 </div>
 <div className="mb-8">
-{web3ProviderConnected  &&   <Chat address={ownerAddress}/>}
+{web3ProviderConnected  &&   <Chat classNames="z-10" address={ownerAddress}/>}
         <div
        
           className="mb-4 text-white rounded-md bg-[#4E4C64] flex items-center justify-center rounded-md py-4 px-8 border border-dashed border-[#A1A0AE] bg-[#353444]"
@@ -238,7 +278,7 @@ useEffect(() => {
             <div className="mt-4 sm:col-span-3">
              
               <div className="mt-2 mb-12">
-              <h1 className="text-5xl font-bold tracking-tight text-green-500">{tag?.id ? tag.id :"----------"}</h1>
+              <h1 className="text-5xl font-bold tracking-tight text-green-500">{tag?.id ? tag.id :(tagQueried ? "Not Found": "----------")}</h1>
 
               </div>
             </div>
@@ -480,7 +520,13 @@ useEffect(() => {
       </div>
     </div>
         </main>
-
+        <Notification
+        type={dialogType}
+        show={show}
+        close={close}
+        title={notificationTitle}
+        description={notificationDescription}
+      />
  <Footer />
     </div>
   )

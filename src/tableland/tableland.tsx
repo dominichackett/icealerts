@@ -12,7 +12,7 @@ const db = new Database({signer})
 
 export const queryEmergencyContacts = async(owner:string)=>{
 
-    const { results } = await db.prepare(`SELECT * FROM ${emergencyTable} where owner='${owner}'  order by contract;`).all();
+    const { results } = await db.prepare(`SELECT * FROM ${emergencycontactsTable} where owner='${owner}'  order by contract;`).all();
 
    return results;
 
@@ -30,17 +30,26 @@ export const queryMessage = async(owner:string)=>{
 
 export const queryTagByOwner = async(owner:string)=>{
 
+    try{
     const { results } = await db.prepare(`SELECT * FROM ${tagsTable} where owner='${owner}';`).all();
 
    return results;
-
+    }
+    catch(error:any)
+    {
+        return []
+    }
 }
 
 
 export const queryTagById = async(id:string)=>{
-
+    try{
     const { results } = await db.prepare(`SELECT * FROM ${tagsTable} where owner='${id}';`).all();
 
    return results;
-
+}
+catch(error:any)
+{
+    return []
+}
 }
