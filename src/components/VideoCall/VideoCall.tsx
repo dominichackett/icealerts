@@ -32,6 +32,24 @@ export default function VideoCall(props){
     const [isCameraOff, setCameraOff] = useState(false);
     const [currentCall,setCurrentCall] = useState()
     const [incomingCall,setIncomingCall] = useState() 
+    const dialRef = useRef(null);
+    const incomingRef = useRef(null);
+
+    const handleDialAudio = (arg:number) => {
+
+      if(arg==1)
+      dialRef.current.play();
+    else
+      dialRef.current.pause();
+    };
+  
+  const handleIncomingAudio = (arg:number) => {
+    if(arg==1)
+      incomingRef.current.play();
+    else
+    incomingRef.current.pause();
+  };
+
      const { pushSocket, isPushSocketConnected, latestFeedItem } = usePushSocket({
         env,chain:5,address:props.address
       });
@@ -91,6 +109,7 @@ export default function VideoCall(props){
   };
   const setRequestVideoCall = async () => {
     setCurrentCall(true)
+    handleDialAudio(1)
     // fetching chatId between the local address and the remote address
     const user = await PushAPI.user.get({
       account: props.address!,
@@ -165,6 +184,9 @@ export default function VideoCall(props){
   };
   const acceptVideoCallRequest = async () => {
       console.log(data.local)
+      handleIncomingAudio(2)  //Stop ringing
+      handleDialAudio(2)
+
     if (!data.local.stream) return;
 
     await videoObjectRef.current?.acceptRequest({
@@ -183,6 +205,8 @@ export default function VideoCall(props){
       signalData,
       peerAddress: senderAddress,
     });
+    handleDialAudio(2)
+    
   };
 
     // initialize video call object
@@ -262,8 +286,14 @@ export default function VideoCall(props){
     setIncomingCall(true)
 
     if (videoCallMetaData.status === PushAPI.VideoCallStatus.INITIALIZED) {
+
+
       setIncomingVideoCall(videoCallMetaData);
+        
+
       console.log("Incoming Call Data")
+      handleIncomingAudio(1)
+
     } else if (
       videoCallMetaData.status === PushAPI.VideoCallStatus.RECEIVED ||
       videoCallMetaData.status === PushAPI.VideoCallStatus.RETRY_RECEIVED
@@ -272,7 +302,11 @@ export default function VideoCall(props){
     } else if (
       videoCallMetaData.status === PushAPI.VideoCallStatus.DISCONNECTED
     ) {
-      window.location.reload();
+      ///window.location.reload();
+      setIncomingCall(false)
+      setCurrentCall(false)
+      handleDialAudio(2)
+      handleIncomingAudio(2)
     } else if (
       videoCallMetaData.status === PushAPI.VideoCallStatus.RETRY_INITIALIZED &&
       videoObjectRef.current?.isInitiator()
@@ -294,14 +328,21 @@ export default function VideoCall(props){
         chatId: data.meta.chatId,
         retry: true,
       });
+    }else if(videoCallMetaData.status === PushAPI.VideoCallStatus.CONNECTED){
+      handleDialAudio(2)
+      handleIncomingAudio(2)
+      
     }
   }, [latestFeedItem]);
 
   const hangUp = async()=>{
+    setCurrentCall(false)
+    handleIncomingAudio(2)
+    handleDialAudio(2)
     videoObjectRef.current?.disconnect({
       peerAddress: data.incoming[0].address,
     })
-    setCurrentCall(false)
+    
   }
 
    return (
@@ -362,9 +403,14 @@ export default function VideoCall(props){
             {(props.caller && !currentCall) && <button className="mr-2 text-green" onClick={setRequestVideoCall}>
               <FontAwesomeIcon icon={faPhoneAlt} size="1x" color="green" /> Call
             </button> }
-           <span className="text-red">{data.incoming[0].status }</span>
           </div>
         </label>
+        <audio loop={true} ref={dialRef}>
+        <source src="/sound/dialing.mp3" type="audio/mpeg" />
+      </audio>
+      <audio loop={true}  ref={incomingRef}>
+        <source src="/sound/incoming.mp3" type="audio/mpeg" />
+      </audio>
       </div>
       
       

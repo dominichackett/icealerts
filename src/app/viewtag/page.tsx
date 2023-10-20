@@ -32,7 +32,7 @@ import { Web3Storage, File } from "web3.storage";
 export default function ViewTag() {
     const [open, setOpen] = useState(false)
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x86820D4C1C9E12F5388136B19Da99A153ED767C1"},{name:'Wife',address:"0x261Fa191c834dC513C6e18AC0f663e049968da0C"},{name:'Mother',address:"0xebdCf3649366505F8dB5D1946dc03Fa186257dec"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
+    const [contacts,setContacts] = useState([])
     const [preview, setPreview] = useState('')
     const [videoCall,setVideoCall] = useState()
     const [addressToCall,setAddressToCall] = useState()
@@ -41,6 +41,8 @@ export default function ViewTag() {
     const [addressToMessage,setAddresToMessage] = useState()
     const [tagFound,setTagFound] = useState(false)
     const [tagQueried,setTagQueried] = useState(false)
+    const [dob, setDOB] = useState(new Date());
+
     const [tag,setTag] = useState()
     const [storage] = useState(
       new Web3Storage({ token: process.env.NEXT_PUBLIC_WEB3_STORAGE_KEY })
@@ -125,14 +127,15 @@ export default function ViewTag() {
       setContacts([])
       setPreview(null)
       const _tag = await queryTagById(tagid)
-      if(_tag.lenght > 0)
+      console.log(_tag)
+      if(_tag.length > 0)
       {
         setNotificationTitle("View Tag")
         setNotificationDescription("Tag id found")
         setDialogType(1) //Success
         setShow(true)  
         const _contacts = await queryEmergencyContacts(_tag[0].owner)
-        if(_contacts.lenght > 0)
+        if(_contacts.length > 0)
         {
             let notificationList = []
             let contactList = []
@@ -146,38 +149,47 @@ export default function ViewTag() {
 
             //Push Protocol Notification
             await sendNotifications(`Tag ID: ${tagid} Scanned`,`Date: ${_date.toDateString()}`,notificationList)
-            
-            
-            //get Metadata
-            const res = await storage.get(_tag[0].cid)
-      console.log(`Got a response! [${res.status}] ${res.statusText}`)
-      if (!res.ok) {
-        setNotificationTitle("View Tag")
-        setNotificationDescription("Error getting medical data")
-        setDialogType(2) //Error
-        setShow(true)
-        return
+               
+        
+             
       }
-    
-      // unpack File objects from the response
-       const files = await res.files()
-      const textContent = await files[0].text();
-      const obj = JSON.parse(textContent)
-      const decryptedData = await lit.decryptString(ob.data,obj.hash)
-      setTag(decryptedData)
-      setPreview( `https://ipfs.io/ipfs/${decryptedData.cid}/${decryptedData.image}`)
+
+      if(_tag[0].cid !="nocid")
+      {
+        const res = await storage.get(_tag[0].cid)
+        console.log(`Got a response! [${res.status}] ${res.statusText}`)
+        if (!res.ok) {
+          setNotificationTitle("View Tag")
+          setNotificationDescription("Error getting medical data")
+          setDialogType(2) //Error
+          setShow(true)
+          return
+        }
       
+        // unpack File objects from the response
+         const files = await res.files()
+        const textContent = await files[0].text();
+        const obj = JSON.parse(textContent)
+        const decryptedData = await lit.decryptString(obj.data,obj.hash)
+        const _t = JSON.parse(decryptedData)
+        setTag({tagid:_tag[0].tagid , ..._t})
+        console.log(decryptedData)
+        setDOB(new Date(_t.dob))
+        setPreview( `https://ipfs.io/ipfs/${_t.cid}/${_t.image}`)
+        console.log(`https://ipfs.io/ipfs/${_t.cid}/${_t.image}`)
       }
       else{
-
-        setNotificationTitle("View Tag")
-        setNotificationDescription("Tag id not found")
-        setDialogType(2) //Error
-        setShow(true)
-        return
+         setTag({tagid:_tag[0].tagid})
       }
+       
+    
       
     
+    }else{
+      setNotificationTitle("View Tag")
+      setNotificationDescription("Tag not found")
+      setDialogType(2) //Error
+      setShow(true)
     }
 
   } 
@@ -350,6 +362,8 @@ export default function ViewTag() {
                 <input
                   id="firstname"
                   name="firstname"
+                  value={tag?.firstname} 
+
                   autoComplete="firstname"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
                 />
@@ -365,6 +379,8 @@ export default function ViewTag() {
                 <input
                   id="lastname"
                   name="lastname"
+                  value={tag?.lastname} 
+
                   autoComplete="lastname"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
                 />
@@ -380,6 +396,7 @@ export default function ViewTag() {
                   id="dob"
                   name="dob"
                   autoComplete="dob"
+                  value={dob?.toDateString()}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
                 />
                   
@@ -393,7 +410,8 @@ export default function ViewTag() {
       <select
         id="bloodTypeSelect"
         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
-
+        value={tag?.bloodtype} 
+ 
       >
         <option value="">Select a blood type</option>
         {bloodTypes.map((type) => (
@@ -411,6 +429,8 @@ export default function ViewTag() {
               <div className="mt-2">
       <select
         id="organdonor"
+        value={tag?.organdonor} 
+
         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
 
       >
@@ -431,6 +451,7 @@ export default function ViewTag() {
                   id="address"
                   name="address"
                   rows={5}
+                  value={tag?.address}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
                   
@@ -448,6 +469,7 @@ export default function ViewTag() {
                   id="allergies"
                   name="allergies"
                   rows={10}
+                  value={tag?.allergies}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
                   
@@ -463,6 +485,7 @@ export default function ViewTag() {
                   id="medication"
                   name="medication"
                   rows={10}
+                  value={tag?.medications}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
                   
@@ -478,6 +501,7 @@ export default function ViewTag() {
                   id="emergencycontact"
                   name="emergencycontact"
                   rows={10}
+                  value={tag?.emergencycontacts}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
                   
@@ -493,6 +517,7 @@ export default function ViewTag() {
                   id="other"
                   name="other"
                   rows={10}
+                  value={tag?.otherinfo}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
                   

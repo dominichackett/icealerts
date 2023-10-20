@@ -224,7 +224,7 @@ export default function Footer(){
             <div className="border-t border-stroke">
               <div className="py-7 text-center">
                 <p className="text-base font-medium text-body-color">
-                  &copy; Copyright {new Date().getFullYear()} - 3D Print Near Me, All rights reserved.
+                  &copy; Copyright {new Date().getFullYear()} - ICE Alerts, All rights reserved.
                 </p>
               </div>
             </div>

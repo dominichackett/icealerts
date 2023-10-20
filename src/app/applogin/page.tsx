@@ -45,7 +45,8 @@ export default function ViewTag() {
 
       if(web3ProviderConnected)
       {
-        const wallet = new ethers.Wallet(privateKey)
+        
+        const wallet = new ethers.Wallet(privateKey )
         console.log(wallet.address)
 
       }
@@ -115,13 +116,12 @@ export default function ViewTag() {
       <Header />
       <main>
       <div className="bg-black">
-      <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:max-w-7xl lg:px-8">
-        <div >
+      <div className="flex justify-center  mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:max-w-7xl lg:px-8">
           {/* Image gallery */}
-          <Tab.Group as="div" className="flex flex-col">
+          <Tab.Group as="div" className="flex flex-row  max-w-screen-lg">
           
         
-                         <div className="mb-8">
+                         <div className="mb-8 w-1/2 p-8">
   
    <label
                       for="file"
@@ -135,10 +135,29 @@ export default function ViewTag() {
     title="ICE Mobile"
     
     />}
-                                     {web3ProviderConnected &&     <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">Scan with Mobile App</h1>}
+                                     {web3ProviderConnected &&     <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">App Login</h1>}
   
 
                     </label>
+</div>
+<div className="mb-8 w-1/2 p-8">
+  
+  <label
+                     for="file"
+                     className="cursor-pointer relative flex flex-col h-[480px] min-h-[200px] items-center justify-center rounded-lg border border-dashed border-[#A1A0AE] bg-[#353444] p-12 text-center"
+                   >
+                                    {web3ProviderConnected &&    <QRCode
+   size={256}
+   style={{height: "auto", maxWidth: "100%", width: "100%",cursor:"pointer" }}
+   value={ownerAddress}
+   viewBox={`0 0 256 256`}
+   title="ICE Mobile"
+   
+   />}
+                                    {web3ProviderConnected &&     <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">My Address</h1>}
+ 
+
+                   </label>
 </div>
 
 
@@ -149,7 +168,7 @@ export default function ViewTag() {
           {/* Product info */}
         
         </div>
-      </div>
+      
     </div>
         </main>
 

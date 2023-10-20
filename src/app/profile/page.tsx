@@ -17,11 +17,13 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useFormik } from 'formik';
 import * as Yup from 'yup' 
-import { queryTagByOwner } from '@/tableland/tableland'
+import { queryTagByOwner,queryEmergencyContacts } from '@/tableland/tableland'
 import { Web3Storage, File } from "web3.storage";
 import Notification from '@/components/Notification/Notification'
 import VideoCall from '@/components/VideoCall/VideoCall'
-  function classNames(...classes) {
+import { ethers } from 'ethers'
+import { iceContractABI,iceContractAddress } from '@/contracts/contracts' 
+function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
   }
   
@@ -33,7 +35,7 @@ import VideoCall from '@/components/VideoCall/VideoCall'
 export default function ViewTag() {
     const [open, setOpen] = useState(false)
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    const [contacts,setContacts] = useState([{name:'Dominic Hackett',address:"0x01231"},{name:'Wife',address:"0x01232"},{name:'Mother',address:"0x01233"},{name:'Father',address:"0x012322"},{name:'Mother-in-law',address:"0x012335"}])
+    const [contacts,setContacts] = useState([])
     const [preview, setPreview] = useState('')
     const [selectedFile, setSelectedFile] = useState(undefined)
     const [dob, setDOB] = useState(new Date());
@@ -54,7 +56,8 @@ export default function ViewTag() {
     const [storage] = useState(
       new Web3Storage({ token: process.env.NEXT_PUBLIC_WEB3_STORAGE_KEY })
     );
-   const formik = useFormik({initialValues:{firstname:'',lastname:'',bloodtype:'',address:'',allergies:'None',emergencycontacts:'',otherinfo:'NA',dob:dob,bloodtype:""}
+   const formik = useFormik({    enableReinitialize: true,
+    initialValues:{firstname:tag?.firstname,lastname:tag?.lastname,bloodtype:tag?.bloodtype,address:tag?.address,allergies:tag?.allergies,emergencycontacts:tag?.emergencycontacts,otherinfo:tag?.otherinfo,dob:dob}
     ,validationSchema: Yup.object().shape({
       firstname:Yup.string().required("First name is required"),
       lastname:Yup.string().required("Last name is required"),
@@ -78,7 +81,7 @@ export default function ViewTag() {
      
   }), onSubmit: async (values) => {
    
-   if(!selectedFile || !tagQueried)
+   if((!selectedFile && !tag?.cid)  || !tagQueried)
      return
 
      if(tagQueried && !tagFound)
@@ -89,28 +92,92 @@ export default function ViewTag() {
       setShow(true)
       return
      }
-
-    const cid = await storage.put([new File([selectedFile],filename.current)]);
-    values.cid = cid
-    values.image = filename.current
+    let cid = tag?.cid
+    if(!cid || selectedFile)
+    {
+      cid = await storage.put([new File([selectedFile],filename.current)]);
+    
+      values.cid = cid
+      values.image = filename.current
+      
+    }
+    else
+    { 
+      values.cid = cid
+      values.image =  tag.image
+      
+    }
     //console.log(values)
     
     const encryptedData = await lit.encryptString(JSON.stringify(values))
     console.log(encryptedData)
 
-    const decryptedData = await lit.decryptString(encryptedData.ciphertext,encryptedData.dataToEncryptHash)
-    console.log(JSON.parse(decryptedData))
+   
     const data = {data:encryptedData.ciphertext,hash:encryptedData.dataToEncryptHash}
     const dataCID = await storage.put([
       new File([JSON.stringify(data)], "metadata.json"),
     ]);
 
     //Do Smart Contract Calls here
+    updateCID(dataCID)
+    
+
   },
 
       
 
    })
+
+
+  async function updateCID(cid:any){
+
+    setNotificationTitle("Save Profile")
+      setNotificationDescription("Updating ICE Profile")
+      setDialogType(3) //Error
+      setShow(true)
+    const contract = new ethers.Contract(
+      iceContractAddress,
+      iceContractABI,
+      web3Provider?.getSigner()
+    );
+
+    try {
+      let tx1 = await contract.callStatic.updateTagCID(
+       cid
+      );
+
+       let tx2 = await contract.updateTagCID(
+        cid
+       );
+      await tx2.wait();
+
+      setDialogType(1); //Success
+      setNotificationTitle("Save Profile");
+      setNotificationDescription("Profile updated successfully.");
+      setShow(true);
+      
+    } catch (error) 
+    {
+      if (error.code === "TRANSACTION_REVERTED") {
+        console.log("Transaction reverted");
+        // let revertReason = ethers.utils.parseRevertReason(error.data);
+        setNotificationDescription("Reverted");
+      } else if (error.code === "ACTION_REJECTED") {
+        setNotificationDescription("Transaction rejected by user");
+      } else {
+        console.log(error);
+        //const errorMessage = ethers.utils.revert(error.reason);
+        setNotificationDescription(
+          `Transaction failed with error: ${error.reason}`
+        );
+      }
+      setDialogType(2); //Error
+      setNotificationTitle("Save Profile");
+
+      setShow(true);
+    }
+  
+  } 
  // create a preview as a side effect, whenever selected file is changed
  const {
   isEditingEnabled,
@@ -156,15 +223,49 @@ useEffect(() => {
   }
 
  useEffect(()=>{
+
+  async function getEmergencyContacts()
+  {
+    const _contacts = await queryEmergencyContacts(ownerAddress?.toLowerCase())
+    setContacts(_contacts)
+  }
   async function getTagInfo()
   {
-       const _tag = await queryTagByOwner(ownerAddress)
-       console.log(tag)
-       if(_tag.lenght > 0)
+       const _tag = await queryTagByOwner(ownerAddress?.toLowerCase())
+       console.log(_tag)
+       if(_tag.length > 0)
        {
           setTagFound(true)
           setTagQueried(true)
-          setTag(_tag[0])
+          
+          if(_tag[0].cid !="nocid")
+          {
+            const res = await storage.get(_tag[0].cid)
+            console.log(`Got a response! [${res.status}] ${res.statusText}`)
+            if (!res.ok) {
+              setNotificationTitle("Profile")
+              setNotificationDescription("Error getting medical data")
+              setDialogType(2) //Error
+              setShow(true)
+              return
+            }
+          
+            // unpack File objects from the response
+             const files = await res.files()
+            const textContent = await files[0].text();
+            const obj = JSON.parse(textContent)
+            const decryptedData = await lit.decryptString(obj.data,obj.hash)
+            const _t = JSON.parse(decryptedData)
+            setTag({tagid:_tag[0].tagid , ..._t})
+            console.log(decryptedData)
+            setDOB(new Date(_t.dob))
+            setPreview( `https://ipfs.io/ipfs/${_t.cid}/${_t.image}`)
+            console.log(`https://ipfs.io/ipfs/${_t.cid}/${_t.image}`)
+          }
+          else{
+             setTag({tagid:_tag[0].tagid})
+          }
+          
        }
 
        else
@@ -174,8 +275,11 @@ useEffect(() => {
        }
   }     
   if(web3ProviderConnected)
+  {
     getTagInfo()
-  console.log("KKK")
+    getEmergencyContacts()
+  }
+    
  },[web3ProviderConnected])
   return (
     <div className="bg-black">
@@ -282,7 +386,7 @@ useEffect(() => {
             <div className="mt-4 sm:col-span-3">
              
               <div className="mt-2 mb-12">
-              <h1 className="text-5xl font-bold tracking-tight text-green-500">{tag?.id ? tag.id :(tagQueried ? "Not Found": "----------")}</h1>
+              <h1 className="text-5xl font-bold tracking-tight text-green-500">{tag?.tagid ? tag.tagid :(tagQueried ? "Not Found": "----------")}</h1>
 
               </div>
             </div>
@@ -330,6 +434,7 @@ useEffect(() => {
                   name="firstname"
                   autoComplete="firstname"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                  defaultValue={tag?.firstname}
                   onChange={formik.handleChange}
                 />
 
@@ -349,6 +454,7 @@ useEffect(() => {
                   name="lastname"
                   autoComplete="lastname"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                  defaultValue={tag?.lastname}
                   onChange={formik.handleChange}
                 />
                   {formik.errors.lastname && formik.touched.lastname ?    <span className="text-red mt-4 font-bold ">{formik.errors.lastname}</span>:null}
@@ -373,6 +479,7 @@ useEffect(() => {
               <div className="mt-2">
       <select
         id="bloodtype"
+        value={tag?.bloodtype} 
         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
         onChange={formik.handleChange}
       >
@@ -395,7 +502,7 @@ useEffect(() => {
       <select
         id="organdonor"
         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
-
+        value={tag?.organdonor} 
       >
         <option value="No">No</option>
         <option value="Yes">Yes</option>
@@ -406,7 +513,7 @@ useEffect(() => {
             </div>
 
             <div className="mt-4 sm:col-span-3">
-              <label htmlFor="country" className="block text-sm font-medium leading-6 text-white">
+              <label htmlFor="address" className="block text-sm font-medium leading-6 text-white">
                 Address
               </label>
               <div className="mt-2">
@@ -414,6 +521,7 @@ useEffect(() => {
                   id="address"
                   name="address"
                   rows={5}
+                  defaultValue={tag?.address}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   onChange={formik.handleChange}
                 />
@@ -434,7 +542,7 @@ useEffect(() => {
                   id="allergies"
                   name="allergies"
                   rows={10}
-                  defaultValue={'Unknown'}
+                  defaultValue={tag?.allergies}
 
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   onChange={formik.handleChange}
@@ -453,7 +561,7 @@ useEffect(() => {
               <textarea
                   id="medications"
                   name="medications"
-
+                  defaultValue={tag?.medications}   
                   rows={10}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   onChange={formik.handleChange}
@@ -473,6 +581,7 @@ useEffect(() => {
                   id="emergencycontacts"
                   name="emergencycontacts"
                   rows={10}
+                  defaultValue={tag?.emergencycontacts}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   onChange={formik.handleChange}
                 />
@@ -490,7 +599,7 @@ useEffect(() => {
               <textarea
                   id="otherinfo"
                   name="otherinfo"
-
+                 defaultValue={tag?.otherinfo} 
                   rows={10}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   onChange={formik.handleChange}
