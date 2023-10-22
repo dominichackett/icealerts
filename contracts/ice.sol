@@ -99,8 +99,11 @@ contract ICEAlerts is Ownable , ReentrancyGuard {
       string.concat(
       
         SQLHelpers.quote(Strings.toHexString(msg.sender)), // Wrap strings in single quotes
+          ",",
          SQLHelpers.quote(Strings.toHexString(_contactAddress)),
-          SQLHelpers.quote(_name)  
+           ",",
+          SQLHelpers.quote(_name)
+              
       )
     )
   );

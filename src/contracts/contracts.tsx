@@ -1,4 +1,4 @@
-export const  iceContractAddress = "0x7EC6B11c8C440359D9deD90fE3b3555fA4E8B2bE"
+export const  iceContractAddress = "0x53B382216EB5CDC7b83455bb9D5d7E4202F21f56"
 export const iceContractABI = [
     'function  withdrawAllTokens() external',
     'function  createTag(string memory _tagId, string memory _cid) external',
