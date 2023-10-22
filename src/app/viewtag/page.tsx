@@ -126,12 +126,17 @@ export default function ViewTag() {
       setTag(null)
       setContacts([])
       setPreview(null)
+        setNotificationTitle("View Tag")
+        setNotificationDescription(`Searching for tag: ${tagid}`)
+        setDialogType(3) //Info
+        setShow(true)  
+      
       const _tag = await queryTagById(tagid)
       console.log(_tag)
       if(_tag.length > 0)
       {
         setNotificationTitle("View Tag")
-        setNotificationDescription("Tag id found")
+        setNotificationDescription(`Tag id: ${tagid} found`)
         setDialogType(1) //Success
         setShow(true)  
         const _contacts = await queryEmergencyContacts(_tag[0].owner)
@@ -141,8 +146,8 @@ export default function ViewTag() {
             let contactList = []
             for(const _contact in _contacts)
             {
-               notificationList.push(`eip155:5:${_contacts[_contact].address}`)
-               contactList.push({name:_contacts[_contact].contact,address:_contacts[_contact].address})
+               notificationList.push(`eip155:5:${_contacts[_contact].contactAddress}`)
+               contactList.push({contact:_contacts[_contact].contact,contactAddress:ethers.utils.getAddress(_contacts[_contact].contactAddress)})
             }
             setContacts(contactList)
             const _date = new Date()
@@ -329,16 +334,16 @@ export default function ViewTag() {
           key={index}
           className="mb-4 text-white rounded-md bg-[#4E4C64] flex justify-between rounded-md py-4 px-8 border border-dashed border-[#A1A0AE] bg-[#353444]"
         >
-          <span>{item.name}</span>
+          <span>{item.contact}</span>
           <div className="flex space-x-4">
             {/* Video Call Button */}
-            <button className="flex items-center p-2 bg-red-500 text-white rounded-md" onClick={()=>setCallData(item.name,item.address)}>
+            <button className="flex items-center p-2 bg-red-500 text-white rounded-md" onClick={()=>setCallData(item.contact,item.contactAddress)}>
               <VideoCameraIcon className="w-5 h-5 mr-2" /> {/* Adjust icon size and spacing */}
               Video Call
             </button>
 
             {/* Message Button */}
-            <button className="flex items-center p-2 bg-green-500 text-white rounded-md" onClick={()=>setMessageData(item.name,item.address)}>
+            <button className="flex items-center p-2 bg-green-500 text-white rounded-md" onClick={()=>setMessageData(item.contact,item.contactAddress)}>
               <ChatBubbleLeftIcon className="w-5 h-5 mr-2" /> {/* Adjust icon size and spacing */}
               Message
             </button>

@@ -228,6 +228,7 @@ useEffect(() => {
   {
     const _contacts = await queryEmergencyContacts(ownerAddress?.toLowerCase())
     setContacts(_contacts)
+    console.log(_contacts)
   }
   async function getTagInfo()
   {
@@ -410,7 +411,7 @@ useEffect(() => {
           key={index}
           className="mb-4 text-white rounded-md bg-[#4E4C64] flex justify-between rounded-md py-4 px-8 border border-dashed border-[#A1A0AE] bg-[#353444]"
         >
-          <span>{item.name}</span>
+          <span>{item.contact}</span>
          
         </div>
       ))}

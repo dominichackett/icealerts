@@ -135,7 +135,8 @@ export default function VideoCall(props){
    console.log(response)
     let chatId = '';
     for (const chat of response) {
-      if (chat.did === 'eip155:' + props.addressToCall) {
+      console.log(chat.did.toLowerCase())
+      if (chat.did == 'eip155:' + props.addressToCall) {
         chatId = chat.chatId;
         console.log("Chatting");
         break; // Exit the loop when a match is found, assuming you only need one chat.

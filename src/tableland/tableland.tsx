@@ -16,7 +16,7 @@ const db = new Database({signer})
 
 export const queryEmergencyContacts = async(owner:string)=>{
     try {
-    const { results } = await db.prepare(`SELECT * FROM ${emergencycontactsTable} where owner='${owner}'  order by contract;`).all();
+    const { results } = await db.prepare(`SELECT * FROM ${emergencycontactsTable} where owner='${owner}'  order by contact;`).all();
 
    return results;
 }
